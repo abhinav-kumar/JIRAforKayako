@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<swiftsettings>
+	<group name='settings_bj' app='jira' ishidden='0'>
+		<setting name='bj_accesssettings' type='title'/>
+		<setting name='bj_isenabled' type='yesno'>
+			<defaultvalue>0</defaultvalue>
+		</setting>
+		<setting name='bj_jiraurl' type='url'>
+			<defaultvalue>http://bugs.yourdomain.com</defaultvalue>
+		</setting>
+		<setting name='bj_username' type='text'>
+			<defaultvalue></defaultvalue>
+		</setting>
+		<setting name='bj_password' type='password'>
+			<defaultvalue></defaultvalue>
+		</setting>
+
+
+		<setting name='bj_includesubjectinlink' type='yesno'>
+			<defaultvalue>1</defaultvalue>
+		</setting>
+		<setting name='bj_jiraissuelinking' type='yesno'>
+			<defaultvalue>1</defaultvalue>
+		</setting>
+		<setting name="bj_timeout" type="number">
+			<defaultvalue>1</defaultvalue>
+		</setting>
+	</group>
+</swiftsettings>

@@ -1,0 +1,35 @@
+<script type="text/javascript">
+	QueueFunction(function() {
+		tabPrefix = '<?php echo $_tabPrefix; ?>';
+		jQuery('#' + tabPrefix + 'jiraissue').hide();
+		jQuery('#' + tabPrefix + 'posttojira').click( function(){
+			jQuery('#' + tabPrefix + 'jiraissue').toggle();
+			return false;
+		});
+	});
+</script>
+
+<?php
+if (SWIFT_App::IsInstalled(APP_JIRA)) {
+	$this->Load->Library('JIRA:JIRABridge', false, false, 'jira');
+
+	$_JIRABridge = SWIFT_JIRABridge::GetInstance();
+
+	if (isset($SWIFT_TicketObject) && $_SWIFT_TicketObject instanceof SWIFT_Ticket && $SWIFT_TicketObject->GetIsClassLoaded()) {
+		if ($_JIRABridge && $_JIRABridge instanceof SWIFT_JIRABridge && $_JIRABridge->GetIsClassLoaded()) {
+			$_issuesContainer = $_JIRABridge->GetIssuesBy('ticketid', $_SWIFT_TicketObject->GetProperty('ticketid'));
+
+			if (!empty($_issuesContainer)) {
+				$_extendedOptions .= '&nbsp;&nbsp;&nbsp;&nbsp;<label for="' . $_tabPrefix . 'posttojira"><input type="checkbox" value="1" id="' . $_tabPrefix . 'posttojira" class="swiftcheckbox" name="opt' . $_tabPrefix . '_posttojira" />&nbsp;&nbsp;<img src="' . SWIFT::Get('swiftpath') . '__modules/jira/resources/postbugtojira_b.gif' . '" align="absmiddle" border="0" />' . $this->Language->Get('postJIRAComment') . '</label>';
+				$_extendedOptions .= '&nbsp;&nbsp;&nbsp;&nbsp;<select style="display:none;" type="checkbox" id="' . $_tabPrefix . 'jiraissue" name="opt' . $_tabPrefix . '_jiraissue">';
+				foreach ($_issuesContainer as $_issuesContainer) {
+					$_extendedOptions .= '<option value="' . $_issuesContainer->GetKey() . '">' . $_issuesContainer->GetKey() . '</option>';
+				}
+				$_extendedOptions .= '</select>';
+			}
+		} else {
+			if ($_SWIFT->Settings->Get('bj_isenabled'))
+				$this->UserInterface->DisplayAlert($this->Language->Get('jira_error'), $this->Language->Get('connection_error') . $_SWIFT->Settings->Get('bj_jiraurl'));
+		}
+	}
+}

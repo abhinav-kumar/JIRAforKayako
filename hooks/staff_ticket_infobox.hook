@@ -1,0 +1,49 @@
+<?php
+
+/**
+ * =======================================
+ * ###################################
+ * SWIFT Framework
+ *
+ * @package		SWIFT
+ * @author		Kayako Infotech Ltd.
+ * @copyright	Copyright (c) 2001-2009, Kayako Infotech Ltd.
+ * @license		http://www.kayako.com/license
+ * @link		http://www.kayako.com
+ * @filesource
+ * ###################################
+ * =======================================
+ */
+/**
+ * 'staff_ticket_infobox' hook file
+ * The hook gets called while rendering the ticket information box on the left
+ * We use it to add the list of associated JIRA issues with the current ticket
+ * @author Abhinav Kumar <abhinav.kumar@kayako.com>
+ */
+$_SWIFT = SWIFT::GetInstance();
+
+$_SWIFT->Language->LoadApp('jira', APP_JIRA);
+
+$_baseURL = $_SWIFT->Settings->Get('bj_jiraurl');
+
+$this->Load->Library('JIRA:JIRABridge', false, false, 'jira');
+
+$_JIRABridge = SWIFT_JIRABridge::GetInstance();
+
+if ($_JIRABridge && $_JIRABridge instanceof SWIFT_JIRABridge && $_JIRABridge->GetIsClassLoaded()) {
+	$issuesContainer = $_JIRABridge->GetIssuesBy('ticketid', $_SWIFT_TicketObject->GetTicketID());
+
+	if ($issuesContainer && _is_array($issuesContainer)) {
+		$_informationHTML .= '<div class="ticketinfoitem jiraIssueInfo"><div class="ticketinfoitemtitle">' . $this->Language->Get('JIRATicketID') . '</div>';
+
+		foreach ($issuesContainer as $_JIRAIssue) {
+			$_informationHTML .= '<div class="ticketinfoitemlink" id="' . $_JIRAIssue->GetKey() . '"><a href="' . $_baseURL . 'browse/' . $_JIRAIssue->GetKey() . '" target="_blank">' . $_JIRAIssue->GetKey() . '</a></div>';
+		}
+
+		$_informationHTML .= '</div>';
+	}
+} else {
+	if ($_SWIFT->Settings->Get('bj_isenabled')) {
+		$this->UserInterface->DisplayAlert($this->Language->Get('jira_error'), $this->Language->Get('connection_error') . $_SWIFT->Settings->Get('bj_jiraurl'));
+	}
+}

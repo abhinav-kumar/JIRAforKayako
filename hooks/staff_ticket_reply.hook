@@ -1,0 +1,62 @@
+<?php
+
+/**
+ * =======================================
+ * ###################################
+ * SWIFT Framework
+ *
+ * @package		SWIFT
+ * @author		Kayako Infotech Ltd.
+ * @copyright	Copyright (c) 2001-2009, Kayako Infotech Ltd.
+ * @license		http://www.kayako.com/license
+ * @link		http://www.kayako.com
+ * @filesource
+ * ###################################
+ * =======================================
+ */
+/**
+ * 'staff_ticket_reply' hook
+ * The hook gets called once the ticket reply form is submitted
+ * We use it to check if the 'export to JIRA' checkbox was checked & if yes the comment is posted to JIRA
+ * @author Abhinav Kumar <abhinav.kumar@kayako.com>
+ */
+if (array_key_exists('optreply_posttojira', $_POST) && $_POST['optreply_posttojira']) {
+	$this->Load->Library('JIRA:JIRABridge', false, false, 'jira');
+	$this->Load->Library('JIRA:JIRAComment', false, false, 'jira');
+
+	$_JIRABridge = SWIFT_JIRABridge::GetInstance();
+
+	if ($_JIRABridge) {
+		$_issueKey = $_POST['optreply_jiraissue'];
+
+		$_JIRAIssue = $_JIRABridge->GetIssueBy('issuekey', $_issueKey);
+
+		if ($_JIRAIssue) {
+			$_issueCreator = $_SWIFT_TicketPostObject->GetProperty('fullname');
+
+			$_staffDataStore = $_SWIFT->Staff->GetDataStore();
+			$_issueCreator = $_staffDataStore['grouptitle'];
+
+
+			$_postedOn = SWIFT_Date::Get(SWIFT_Date::TYPE_DATETIME, $_SWIFT_TicketPostObject->GetProperty('dateline'));
+
+			$_comment = $_issueCreator . ' - ' . SWIFT_CRLF . strip_tags(trim($_SWIFT_TicketPostObject->GetDisplayContents())) . SWIFT_CRLF;
+
+
+			$_JIRAComment = new SWIFT_JIRAComment();
+
+			$_JIRAComment->SetBody($_comment);
+
+			if ($_JIRAIssue->PostComment($_JIRAComment) !== FALSE) {
+				$_SWIFT = SWIFT::GetInstance();
+				$_SWIFT->Language->LoadApp('jira', 'jira');
+
+				SWIFT_TicketAuditLog::Log($_SWIFT_TicketObject, null, SWIFT_TicketAuditLog::ACTION_UPDATESTATUS, $this->Language->Get('jira_comment_posted') . ' - ' . $_issueKey, SWIFT_TicketAuditLog::VALUE_NONE, 0, '', 0, '');
+			} else {
+				SWIFT::Notify(SWIFT::NOTIFICATION_ERROR, $_JIRABridge->GetErrorMessage() . $this->Language->Get('jira_comment_notposted'));
+			}
+		} else {
+			SWIFT::Notify(SWIFT::NOTIFICATION_ERROR, $_JIRABridge->GetErrorMessage() . $this->Language->Get('jira_comment_notposted'));
+		}
+	}
+}

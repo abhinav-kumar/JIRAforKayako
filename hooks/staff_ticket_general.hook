@@ -1,0 +1,47 @@
+<?php
+if (isset($_POST['genticketstatusid']) && !empty($_POST['genticketstatusid'])) {
+	$_SWIFT = SWIFT::GetInstance();
+
+	$_ticketStatusClosed	= false;
+	$_ticketStatusCache		= $_SWIFT->Cache->Get('statuscache');
+
+	if (_is_array($_ticketStatusCache)) {
+		foreach ($_SWIFT->Cache->Get('statuscache') as $_status) {
+			if ($_status['markasresolved']) {
+				$_ticketStatusClosed = $_status['ticketstatusid'];
+			}
+		}
+	}
+
+	if ($_POST['genticketstatusid'] == $_ticketStatusClosed) {
+
+		$_SWIFT->Language->LoadApp('jira', APP_JIRA);
+		$this->Load->Library('JIRA:JIRABridge', false, false, 'jira');
+		$this->Load->Library('JIRA:JIRAComment', false, false, 'jira');
+
+		$_JIRABridge = SWIFT_JIRABridge::GetInstance();
+
+		if ($_JIRABridge && $_JIRABridge instanceof SWIFT_JIRABridge && $_JIRABridge->GetIsClassLoaded()) {
+			$_JIRAIssuesContainer = $_JIRABridge->GetIssuesBy('ticketid', $_SWIFT_TicketObject->GetTicketID());
+
+			if (_is_array($_JIRAIssuesContainer)) {
+				foreach ($_JIRAIssuesContainer as $_JIRAIssue) {
+					if ($_SWIFT_TicketObject && $_SWIFT_TicketObject instanceof SWIFT_Ticket && $_SWIFT_TicketObject->GetIsClassLoaded()) {
+						$_ticketURL		= SWIFT::Get('basename') . '/Tickets/Ticket/View/' . $_SWIFT_TicketObject->GetTicketID();
+						$_issueKey		= $_JIRAIssue->GetKey();
+						$_ticketSummary	= $_SWIFT_TicketObject->GetProperty('subject');
+
+						if ($_ticketStatusClosed) {
+							$_JIRABridge->PostRemoteLink($_issueKey, $_ticketURL, $_SWIFT_TicketObject->GetTicketDisplayID(), $_ticketSummary,$_ticketStatusClosed);
+
+							$_JIRAComment = new SWIFT_JIRAComment();
+							$_JIRAComment->SetBody(sprintf($this->Language->Get('jira_linkedticketclosed'), $_SWIFT_TicketObject->GetTicketDisplayID(), $_SWIFT->Staff->GetProperty('fullname')));
+							$_JIRAComment->SetIssue($_JIRAIssue);
+							$_JIRAIssue->PostComment($_JIRAComment);
+						}
+					}
+				}
+			}
+		}
+	}
+}

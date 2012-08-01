@@ -1,0 +1,167 @@
+<?php
+/**
+ * =======================================
+ * ###################################
+ * SWIFT Framework
+ *
+ * @package		SWIFT
+ * @author		Kayako Infotech Ltd.
+ * @copyright	Copyright (c) 2001-2009, Kayako Infotech Ltd.
+ * @license		http://www.kayako.com/license
+ * @link		http://www.kayako.com
+ * @filesource
+ * ###################################
+ * =======================================
+ */
+/**
+ * 'staff_ticket_generaltab' hook file
+ * The hook gets called while rendering the ticket general tab
+ * We use this hook to inject our javascript event handlers for the 'Unlink' & 'Comment' buttons
+ * @author Abhinav Kumar <abhinav.kumar@kayako.com>
+ */
+$_SWIFT->Language->LoadApp('jira', 'jira');
+?>
+<script type="text/javascript">
+jQuery(function(){
+	jQuery("#selectproject").live('change', function(){
+		removeAllLoaders('issuetypeloader');
+		jQuery("#selectissueType").addLoader();
+		jQuery("#selectsecurityLevel").addLoader();
+		_url = '<?php echo SWIFT::Get('basename') ?>' + '/JIRA/Bug/GetIssueTypesByProject/' + this.value;
+		$.getJSON(_url, null, function(response){
+			if (response) {
+				$("#selectissueType").html('');
+				$(response).each(function(){
+					$("#selectissueType").append('<option value=' + this.value + '>' + this.title + '</option>');
+				});
+				removeAllLoaders('issuetypeloader');
+				jQuery('#selectsecurityLevel').addLoader();
+				//$("#selectsecurityLevel").parent().parent().show();
+				$.getJSON('<?php echo SWIFT::Get('basename') ?>' + '/JIRA/Bug/GetSecurityLevel/' + $('#selectproject').val() + '/' + $('#selectissueType option[selected=\'selected\'').text(), null, function(response){
+					if (response.code == '204') {
+						jQuery("#selectsecurityLevel").html('<option><?php echo $_SWIFT->Language->Get('jira_notapplicable');?></option>')
+												.attr('disabled', true);
+					}
+					if (response.code == '200') {
+						jQuery("#selectsecurityLevel").attr('disabled', false);
+						jQuery("#selectsecurityLevel").html('');
+						data = response.data;
+
+						$(data).each(function(){
+							$("#selectsecurityLevel").append('<option value="' + this.value + '">' + this.title + '</option>');
+						});
+					}
+					jQuery(".issuetypeloader").each(function(){
+						jQuery(this).remove();
+					});
+					return false;
+				});
+			}
+		})
+	});
+	jQuery("#jira_issue_id").live('blur',function(){
+		if (jQuery(this).val() == '') {
+			alert('Issue ID <?php echo $_SWIFT->Language->Get('jira_noempty')?>');
+			jQuery(this).focu();
+			return false;
+		}
+		_url = '<?php echo SWIFT::Get('basename') ?>' + '/JIRA/Bug/IsIssueValid/' + this.value;
+		jQuery.getJSON(_url, null, function(response){
+			if (response.code == '404') {
+				alert(jQuery("#jira_issue_id").val() + ' is not a valid JIRA issue');
+				jQuery("#jira_issue_id").focus();
+				return false;
+			}
+		});
+	});
+
+});
+
+	function unlinkJIRAIssue(_issueKey) {
+
+		if (confirm('<?php echo $_SWIFT->Language->Get('jira_confimunlink') ?>')) {
+
+			jQuery.getJSON('<?php echo SWIFT::Get('basename') ?>/JIRA/Bug/Unlink/' + _issueKey + '/<?php echo $_SWIFT_TicketObject->GetTicketID()?>', function(data){
+				if (data == undefined) {
+					alert('<?php echo $_SWIFT->Language->Get('jira_unlinkerror') ?>');
+				} else if (data.code == 200 && data.message == 'success') {
+					removeRow(_issueKey);
+				} else if (data.message == 'noissuekey') {
+					if (confirm('<?php echo $_SWIFT->Language->Get('jira_confirmunlinknoissue');?>')) {
+						removeRow(_issueKey);
+					}
+				}
+			});
+		}
+		return false;
+	}
+
+	function postJIRAComment(_issueKey)
+	{
+		_url = '<?php echo SWIFT::Get('basename') , '/Jira/Bug/IsIssueValid/'?>' + _issueKey;
+		jQuery.getJSON(_url, null, function(response){
+			if (response && response.code == '200' && response.response == 'success') {
+				UICreateWindow('<?php echo SWIFT::Get('basename') ?>/JIRA/Bug/PostCommentForm/' + _issueKey, 'exporttojira', '<?php echo $_SWIFT->Language->Get('postJIRAComment') ?>', 'loading', 500, 329, true, this);
+			} else {
+				if (confirm('<?php echo $_SWIFT->Language->Get('jira_confirmunlinknoissue');?>')) {
+					removeRow(_issueKey);
+				}
+			}
+		});
+		return false;
+	}
+
+	function remove()
+	{
+		jQuery(this).remove();
+	}
+
+	function removeRow(_issueKey)
+	{
+		jQuery('tr#'  + _issueKey).fadeOut('slow', remove);
+		jQuery('div#' + _issueKey).fadeOut('slow', remove);
+
+		count = jQuery('li#tabid_jira').find('div.notecounterred').text();
+		count -= 1;
+		jQuery('li#tabid_jira').find('div.notecounterred').text(count);
+
+		if (count <=0 ) {
+			jQuery('li#tabid_jira').fadeOut('slow', remove);
+			jQuery('div.jiraIssueInfo').fadeOut('slow', remove);
+		}
+	}
+
+	jQuery.fn.addLoader = function(){
+		jQuery(this).after('<div style="display:inline-block; margin-left:5px;" class="issuetypeloader">&nbsp;</div>');
+		$(".issuetypeloader").html('<img src="' + themepath + '/images/loadingcircle.gif"/>');
+		$(this).html('<option><?php echo $this->Language->Get('jira_wait');?></option>');
+	}
+
+	function removeAllLoaders(_classname)
+	{
+		jQuery('.' + _classname).each(function(){
+			jQuery(this).remove();
+		})
+
+	}
+</script>
+<ul class="swiftdropdown" id="jiramenu">
+
+	<li class="swiftdropdownitemparent" onclick="javascript: UICreateWindow('<?php echo SWIFT::Get('basename') , '/Jira/Bug/CreateIssue/' , $_SWIFT_TicketObject->GetTicketID();?>', 'exporttojira', '<?php echo $_SWIFT->Language->Get('exportToJIRA')?>', '<?php echo $_SWIFT->Language->Get('loadingwindow')?>', 800, 700, true, this);">
+		<div class="swiftdropdownitem">
+			<div class="swiftdropdownitemimage">
+				<img border="0" align="absmiddle" src="<?php echo SWIFT::Get('swiftpath') , SWIFT_APPSDIRECTORY, '/jira/resources/postbugtojira_b.gif';?>">
+			</div>
+			<div class="swiftdropdownitemtext" onclick="javascript: void(0);"><?php echo $this->Language->Get('jira_newissue')?></div>
+		</div>
+	</li>
+
+	<li class="swiftdropdownitemparent" onclick="javascript: UICreateWindow('<?php echo SWIFT::Get('basename') , '/Jira/Bug/LinkIssue/' , $_SWIFT_TicketObject->GetTicketID();?>', 'exporttojira', '<?php echo $this->Language->Get('exportToJIRA')?>', '<?php echo $_SWIFT->Language->Get('loadingwindow')?>', 800, 503, true, this)">
+		<div class="swiftdropdownitem">
+			<div class="swiftdropdownitemimage">
+				<img border="0" align="absmiddle" src="<?php echo SWIFT::Get('swiftpath') , SWIFT_APPSDIRECTORY, '/jira/resources/postbugtojira_b.gif';?>">
+			</div>
+			<div class="swiftdropdownitemtext" onclick="javascript: void(0);"><?php echo $this->Language->Get('jira_linktoexisting')?></div>
+		</div>
+	</li>
+</ul>

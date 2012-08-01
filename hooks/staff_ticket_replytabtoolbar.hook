@@ -1,0 +1,2 @@
+<?php
+$_ReplyTabObject->Toolbar->AddButton($this->Language->Get('options'), 'icon_settings2.gif', "\$('#replyoptions').toggle();", SWIFT_UserInterfaceToolbar::LINK_JAVASCRIPT, '', 'replyoptions');

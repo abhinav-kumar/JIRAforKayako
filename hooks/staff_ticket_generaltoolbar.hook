@@ -1,0 +1,46 @@
+<?php
+
+/**
+ * =======================================
+ * ###################################
+ * SWIFT Framework
+ *
+ * @package		SWIFT
+ * @author		Kayako Infotech Ltd.
+ * @copyright	Copyright (c) 2001-2009, Kayako Infotech Ltd.
+ * @license		http://www.kayako.com/license
+ * @link		http://www.kayako.com
+ * @filesource
+ * ###################################
+ * =======================================
+ */
+/**
+ * 'staff_ticket_generaltoolbar' hook file
+ * The hook gets called while rendering the ticket general toolbar
+ * We add the toolbar button for exporting issues to JIRA & the JIRA tab for listing issues pertaining to the current ticket
+ * @author Abhinav Kumar <abhinav.kumar@kayako.com>
+ */
+$_SWIFT = SWIFT::GetInstance();
+
+if ($_SWIFT->Settings->Get('bj_isenabled')) {
+	$_SWIFT->Language->LoadApp('jira', APP_JIRA);
+
+
+	$this->Load->Library('JIRA:JIRABridge', false, false, 'jira');
+
+	$_JIRABridge = SWIFT_JIRABridge::GetInstance();
+
+	if ($_JIRABridge && $_JIRABridge instanceof SWIFT_JIRABridge && $_JIRABridge->GetIsClassLoaded()) {
+		//Add the toolbar button
+		$this->UserInterface->Toolbar->AddButton($this->Language->Get('tabjira'), SWIFT::Get('swiftpath') . SWIFT_APPSDIRECTORY . '/jira/resources/postbugtojira_b.gif', 'UIDropDown(\'jiramenu\', event, \'jira\', \'tabtoolbartable\');', SWIFT_UserInterfaceToolbar::LINK_JAVASCRIPT, 'jira');
+
+		$_issuesContainer = $_JIRABridge->GetIssuesBy('ticketid', $_SWIFT_TicketObject->GetTicketID());
+
+		if (_is_array($_issuesContainer)) {
+			//Add the JIRA tab
+			$_JIRALogTabObject = $this->UserInterface->AddTab($this->Language->Get('tabjira'), SWIFT::Get('swiftpath') . SWIFT_APPSDIRECTORY . '/jira/resources/postbugtojira_b.gif', 'jira', false, false, 0, SWIFT::Get('basename') . '/Jira/IssueHistory/History/' . $_SWIFT_TicketObject->GetTicketID() . '/');
+
+			$_JIRALogTabObject->SetTabCounter(count($_issuesContainer));
+		}
+	}
+}

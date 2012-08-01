@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<title>JIRA</title>
+	<description>Kayako JIRA bridge Provides a seamless integration between Kayako Helpdesk &amp; JIRA Issue tracking</description>
+	<author>Abhinav Kumar</author>
+	<version>1</version>
+</config>
